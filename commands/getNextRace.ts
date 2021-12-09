@@ -1,19 +1,21 @@
 import { SlashCommandBuilder } from '@discordjs/builders';
 import axios from "axios";
 import chalk from 'chalk';
-import ms from 'ms';
-import datefns, { formatDistanceToNowStrict, add } from 'date-fns'
+import datefns, { formatDistanceToNowStrict, getHours, getDate, getMonth, getSeconds, getMinutes, sub, add, formatDistanceStrict } from 'date-fns'
+import cron from "cron";
 
+let allRaces: any[] = [];
 
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName('next-race')
 		.setDescription('Get time until next race'),
 	async execute(interaction: any) {
+
 		try{
 		
 			const res = await axios.get('http://ergast.com/api/f1/current.json');
-			const allRaces = res.data.MRData.RaceTable.Races;
+			allRaces = res.data.MRData.RaceTable.Races;
 
 			const exampleEmbed = {
 				color: 0x0099ff,
@@ -30,7 +32,7 @@ module.exports = {
 				},
 				fields:[
 					{ name: '\u200B', value: '\u200B' },
-					...getRemRaces(allRaces),
+					...formatRaceMessage(allRaces),
 					{ name: '\u200B', value: '\u200B' }
 				],
 				timestamp: new Date(),
@@ -47,43 +49,66 @@ module.exports = {
 			console.error(chalk.redBright('FATAL ERROR'), e);
 		}
 
-
-
+		setReminder(interaction);
+		interaction.channel.send("helo");
 	},
 };
 
-const getRemRaces = (racesTable: any[]) => {
-	let result: any[] = [];
-	let rounds= ['\n',];
-	let circuits = ['\n',];
-	let times = ['\n',];
-
-	const now = Date.now();
-  let raceDate: string = " ";
+const getNextRace = (racesTable: any[]) => {
+	const now = new Date;
+  let raceDate = new Date;
 	for(let i = racesTable.length -1; i >= 0; i--) {
-	  raceDate = `${racesTable[i].date}T${racesTable[i].time}`
-		if (Date.parse(raceDate) > now) {
-			rounds.push(racesTable[i].round);
-			circuits.push(racesTable[i].raceName);
-			times.push(`${racesTable[i].date} ${racesTable[i].time}`);
-      break;
+	  raceDate = new Date(`${racesTable[i].date}T${racesTable[i].time}`)
+		if (raceDate > now) {
+			return racesTable[i];
 		}
 	}
 
-	if(rounds.length == 1) {
+	return undefined;
+}
+
+const setReminder = (interaction: any) => {
+	const nextRace = getNextRace(allRaces);
+	if (nextRace == undefined) {
+		return;
+	}
+	const raceTime = new Date(`${nextRace.date}T${nextRace.time}`);
+	const job1String = formatCronString(add(new Date(), {minutes: 1}), {minute: true});
+	console.log(job1String)
+	let job1 = new cron.CronJob(job1String, () => interaction.channel.send(`RACE STARTS IN ${formatDistanceToNowStrict(raceTime)}`))
+	job1.start()
+}
+
+const formatCronString = (date: Date, {second = false, minute = false, hour = true, day = true, month = true} = {}) => {
+	const sec = second ? getSeconds(date) : 0
+	const min = minute ? getMinutes(date) : 0
+	const hrs = hour ? getHours(date) : '*'
+	const day_num = day ? getDate(date) : '*'
+	const mon = month ? getMonth(date) : '*'
+	
+	return `${sec} ${min} ${hrs} ${day_num} ${mon} *`; 
+}
+
+const formatRaceMessage = (racesTable: any[]) => {
+	let result: any[] = [];
+
+	const nextRace = getNextRace(racesTable);
+	if(!nextRace) {
 		return [{name: 'NO MORE RACES THIS SEASON', value:'\u200B'}]
 	}
 
-	result.push({name: 'ROUND', value: rounds.join('\n'), inline: true});
-	result.push({name: 'CIRCUIT', value: circuits.join('\n'), inline: true});
-	result.push({name: 'DATE / TIME', value: times.join('\n'), inline: true});
+	const raceTime = new Date(`${nextRace.date}T${nextRace.time}`);
+
+	result.push({name: 'ROUND', value: nextRace.round || "NO RACE", inline: true});
+	result.push({name: 'CIRCUIT', value: nextRace.raceName || "NO RACE", inline: true});
+	result.push({name: 'DATE / TIME', value: `${nextRace.date}T${nextRace.time}` || "NO RACE", inline: true});
 
   // calculateRemainingTime()
-  const parsedDate = formatDistanceToNowStrict(new Date(raceDate), {roundingMethod: "round"})
+  const parsedDate = formatDistanceToNowStrict(raceTime, {roundingMethod: "round"})
 
   result.push({ name: '\u200B', value: '\u200B' });
   result.push({ name: '\u200B', value: '\u200B' , inline: true});
-  result.push({ name: 'TIME REMAINING', value: parsedDate , inline: true});
+  result.push({ name: 'TIME REMAINING', value: parsedDate || "NO RACE", inline: true});
 
 
 	return result;
