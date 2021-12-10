@@ -1,22 +1,32 @@
-import { SlashCommandBuilder } from '@discordjs/builders';
+import { SlashCommandBuilder,  } from '@discordjs/builders';
 import axios from "axios";
 import chalk from 'chalk';
-import datefns, { formatDistanceToNowStrict, getHours, getDate, getMonth, getSeconds, getMinutes, sub, add, formatDistanceStrict } from 'date-fns'
-import cron from "cron";
+import  { formatDistanceToNowStrict } from 'date-fns'
+import {setReminder, reminderMenu} from "../src/createReminder";
 
-let allRaces: any[] = [];
+interface Races {
+	[key: string]: any
+}
 
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName('next-race')
-		.setDescription('Get time until next race'),
+		.setDescription('Get time until next race')
+		,
 	async execute(interaction: any) {
-
+		let raceTime: Date | undefined; 
+		await interaction.deferReply()
 		try{
 		
 			const res = await axios.get('http://ergast.com/api/f1/current.json');
-			allRaces = res.data.MRData.RaceTable.Races;
+			const allRaces = res.data.MRData.RaceTable.Races;
+			const nextRace = getNextRace(allRaces);
+			
+			if (nextRace !== undefined) {
+				raceTime = new Date(`${nextRace.date}T${nextRace.time}`);
+			}
 
+			// console.log(raceTime, nextRace)
 			const exampleEmbed = {
 				color: 0x0099ff,
 				title: 'Next Race',
@@ -32,7 +42,7 @@ module.exports = {
 				},
 				fields:[
 					{ name: '\u200B', value: '\u200B' },
-					...formatRaceMessage(allRaces),
+					...formatRaceMessage(allRaces, raceTime),
 					{ name: '\u200B', value: '\u200B' }
 				],
 				timestamp: new Date(),
@@ -42,19 +52,19 @@ module.exports = {
 				},
 			};
 
-			await interaction.reply({embeds: [exampleEmbed]});
+			await interaction.editReply({embeds: [exampleEmbed]});
+
+			if (raceTime) reminderMenu(interaction, raceTime);
 
 		} catch (e) {
-			interaction.reply('ERROR OCCURED!');
+			await interaction.editReply('ERROR OCCURED!');
 			console.error(chalk.redBright('FATAL ERROR'), e);
 		}
-
-		setReminder(interaction);
-		interaction.channel.send("helo");
+		
 	},
 };
 
-const getNextRace = (racesTable: any[]) => {
+const getNextRace = (racesTable: Races[]) => {
 	const now = new Date;
   let raceDate = new Date;
 	for(let i = racesTable.length -1; i >= 0; i--) {
@@ -67,44 +77,18 @@ const getNextRace = (racesTable: any[]) => {
 	return undefined;
 }
 
-const setReminder = (interaction: any) => {
-	const nextRace = getNextRace(allRaces);
-	if (nextRace == undefined) {
-		return;
-	}
-	const raceTime = new Date(`${nextRace.date}T${nextRace.time}`);
-	const job1String = formatCronString(add(new Date(), {minutes: 1}), {minute: true});
-	console.log(job1String)
-	let job1 = new cron.CronJob(job1String, () => interaction.channel.send(`RACE STARTS IN ${formatDistanceToNowStrict(raceTime)}`))
-	job1.start()
-}
-
-const formatCronString = (date: Date, {second = false, minute = false, hour = true, day = true, month = true} = {}) => {
-	const sec = second ? getSeconds(date) : 0
-	const min = minute ? getMinutes(date) : 0
-	const hrs = hour ? getHours(date) : '*'
-	const day_num = day ? getDate(date) : '*'
-	const mon = month ? getMonth(date) : '*'
-	
-	return `${sec} ${min} ${hrs} ${day_num} ${mon} *`; 
-}
-
-const formatRaceMessage = (racesTable: any[]) => {
+const formatRaceMessage = (nextRace: Races | undefined, raceTime: Date | undefined) => {
 	let result: any[] = [];
 
-	const nextRace = getNextRace(racesTable);
-	if(!nextRace) {
+	if(nextRace == undefined) {
 		return [{name: 'NO MORE RACES THIS SEASON', value:'\u200B'}]
 	}
-
-	const raceTime = new Date(`${nextRace.date}T${nextRace.time}`);
-
 	result.push({name: 'ROUND', value: nextRace.round || "NO RACE", inline: true});
 	result.push({name: 'CIRCUIT', value: nextRace.raceName || "NO RACE", inline: true});
 	result.push({name: 'DATE / TIME', value: `${nextRace.date}T${nextRace.time}` || "NO RACE", inline: true});
 
   // calculateRemainingTime()
-  const parsedDate = formatDistanceToNowStrict(raceTime, {roundingMethod: "round"})
+  const parsedDate = formatDistanceToNowStrict(raceTime!, {roundingMethod: "round"})
 
   result.push({ name: '\u200B', value: '\u200B' });
   result.push({ name: '\u200B', value: '\u200B' , inline: true});
