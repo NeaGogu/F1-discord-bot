@@ -2,7 +2,7 @@ import { SlashCommandBuilder,  } from '@discordjs/builders';
 import axios from "axios";
 import chalk from 'chalk';
 import  { formatDistanceToNowStrict } from 'date-fns'
-import {setReminder, reminderMenu} from "../src/createReminder";
+import { reminderMenu} from "../src/createReminder";
 
 interface Races {
 	[key: string]: any
@@ -42,7 +42,7 @@ module.exports = {
 				},
 				fields:[
 					{ name: '\u200B', value: '\u200B' },
-					...formatRaceMessage(allRaces, raceTime),
+					...formatRaceMessage(nextRace, raceTime),
 					{ name: '\u200B', value: '\u200B' }
 				],
 				timestamp: new Date(),
