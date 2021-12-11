@@ -1,8 +1,8 @@
 import { formatDistanceToNowStrict, getHours, getDate, getMonth, getSeconds, getMinutes, sub, add } from 'date-fns'
 import cron from "cron";
-import { MessageButton, MessageActionRow } from 'discord.js';
+import { MessageButton, MessageActionRow, InteractionCollector } from 'discord.js';
 
-const ACTIVE_REMINDERS: cron.CronJob[] = [];
+let ACTIVE_REMINDERS: cron.CronJob[] = [];
 
 export const reminderMenu = (interaction: any, time: Date) => {
   const row = new MessageActionRow().addComponents(
@@ -17,17 +17,17 @@ export const reminderMenu = (interaction: any, time: Date) => {
 
   ) 
   
+  const queryString = ACTIVE_REMINDERS.length > 0 ? 
+              "Reminder already set.\nDo you want to cancel the reminder?":
+              "Do you want to set a reminder?"
+
   interaction.channel.send({
-    content: "Do you want to set a reminder?",
+    content: queryString,
     components: [row],
   })
 
   const filter = (newInterraction: any) => {
-    if (ACTIVE_REMINDERS.length == 0 && interaction.user.id === newInterraction.user.id) return true;
-    else if (ACTIVE_REMINDERS.length > 0) {
-      interaction.channel.send({content: "Reminder already set!!"})
-      return false;
-    }
+    if (interaction.user.id === newInterraction.user.id) return true;
     interaction.channel.send({content: "You cannot use this button!"})
     return false;
   }
@@ -40,6 +40,15 @@ export const reminderMenu = (interaction: any, time: Date) => {
   // TODO: Add logging to reminder events
   // TODO: Add option to remove reminder
   collector.on('end', (buttInteaction: any) => {
+    if (ACTIVE_REMINDERS.length > 0) {
+      if(buttInteaction.first().customId === "setReminder") {
+        cancelReminders();
+        interaction.channel.send("The reminder has been cancelled!")
+        return buttInteaction.first().deferUpdate()
+      }
+      interaction.channel.send("ok")
+      return buttInteaction.first().deferUpdate()
+    }
     if (buttInteaction.first().customId === "setReminder") {
       setReminder(interaction, time);
       interaction.channel.send({content: "Reminder set!"});
@@ -53,15 +62,26 @@ export const reminderMenu = (interaction: any, time: Date) => {
 
 }
 
+const cancelReminders = () => {
+  for(const reminder of ACTIVE_REMINDERS) {
+    reminder.stop()
+  }
+  ACTIVE_REMINDERS = []
+}
 
 export const setReminder = async (interaction: any, time: Date) => {
 
 	// const job1String = formatCronString(add(new Date(), {minutes: 1}), {minute: true});
-  
+  ACTIVE_REMINDERS = []
+
   const now = new Date();
 	let job1 = new cron.CronJob(add(now, {minutes: 1}), () => interaction.channel.send(`RACE STARTS IN ${formatDistanceToNowStrict(time)} at ${time}`))
 	let job2 = new cron.CronJob(add(now, {minutes: 2}), () => interaction.channel.send(`RACE STARTS IN ${formatDistanceToNowStrict(time)}`))
-	let job3 = new cron.CronJob(add(now, {minutes: 3}), () => interaction.channel.send(`RACE STARTS IN ${formatDistanceToNowStrict(time)} at ${time}` ))
+	let job3 = new cron.CronJob(add(now, {minutes: 3}), () => {
+    interaction.channel.send(`RACE STARTS IN ${formatDistanceToNowStrict(time)} at ${time}` )
+    // reset reminders array
+    ACTIVE_REMINDERS = [];
+  })
 
   ACTIVE_REMINDERS.push(job1, job2, job3);
 
