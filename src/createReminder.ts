@@ -3,6 +3,7 @@ import cron from "cron";
 import { MessageButton, MessageActionRow, InteractionCollector } from 'discord.js';
 
 let ACTIVE_REMINDERS: cron.CronJob[] = [];
+let f1RoleId: number;
 
 export const reminderMenu = async (interaction: any, time: Date) => {
   const row = new MessageActionRow().addComponents(
@@ -74,11 +75,25 @@ export const setReminder = async (interaction: any, time: Date) => {
 	// const job1String = formatCronString(add(new Date(), {minutes: 1}), {minute: true});
   ACTIVE_REMINDERS = []
 
-  const now = new Date();
-	let job1 = new cron.CronJob(add(now, {minutes: 1}), () => interaction.channel.send(`RACE STARTS IN ${formatDistanceToNowStrict(time)} at ${time}`))
-	let job2 = new cron.CronJob(add(now, {minutes: 2}), () => interaction.channel.send(`RACE STARTS IN ${formatDistanceToNowStrict(time)}`))
-	let job3 = new cron.CronJob(add(now, {minutes: 3}), () => {
-    interaction.channel.send(`RACE STARTS IN ${formatDistanceToNowStrict(time)} at ${time}` )
+  if(!f1RoleId) {
+    interaction.guild.roles.cache.forEach((val: any, key: any) => {
+      if(val.name == 'F1') {
+        f1RoleId = key
+        return;
+      }
+    });
+  }
+
+	let job1 = new cron.CronJob(sub(time, {hours: 1}), () => {
+    interaction.channel.send(`<@&${f1RoleId}> RACE STARTS IN ${formatDistanceToNowStrict(time)}`)
+  })
+
+	let job2 = new cron.CronJob(sub(time, {minutes: 30}), () => {
+    interaction.channel.send(`<@&${f1RoleId}> RACE STARTS IN ${formatDistanceToNowStrict(time)}`)
+  })
+
+	let job3 = new cron.CronJob(sub(time, {minutes: 10}), () => {
+    interaction.channel.send(`<@&${f1RoleId}> RACE STARTS IN ${formatDistanceToNowStrict(time)}` )
     // reset reminders array
     ACTIVE_REMINDERS = [];
   })

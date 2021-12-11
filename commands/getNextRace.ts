@@ -85,7 +85,7 @@ const formatRaceMessage = (nextRace: Races | undefined, raceTime: Date | undefin
 	}
 	result.push({name: 'ROUND', value: nextRace.round || "NO RACE", inline: true});
 	result.push({name: 'CIRCUIT', value: nextRace.raceName || "NO RACE", inline: true});
-	result.push({name: 'DATE / TIME', value: `${nextRace.date}T${nextRace.time}` || "NO RACE", inline: true});
+	result.push({name: 'DATE / TIME', value: `${raceTime}` || "NO RACE", inline: true});
 
   // calculateRemainingTime()
   const parsedDate = formatDistanceToNowStrict(raceTime!, {roundingMethod: "round"})
