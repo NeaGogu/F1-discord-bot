@@ -4,7 +4,7 @@ import { MessageButton, MessageActionRow, InteractionCollector } from 'discord.j
 
 let ACTIVE_REMINDERS: cron.CronJob[] = [];
 
-export const reminderMenu = (interaction: any, time: Date) => {
+export const reminderMenu = async (interaction: any, time: Date) => {
   const row = new MessageActionRow().addComponents(
     new MessageButton()
 	    .setCustomId('setReminder')
@@ -21,7 +21,7 @@ export const reminderMenu = (interaction: any, time: Date) => {
               "Reminder already set.\nDo you want to cancel the reminder?":
               "Do you want to set a reminder?"
 
-  interaction.channel.send({
+  const queryMessage = await interaction.channel.send({
     content: queryString,
     components: [row],
   })
@@ -38,8 +38,8 @@ export const reminderMenu = (interaction: any, time: Date) => {
   })
 
   // TODO: Add logging to reminder events
-  // TODO: Add option to remove reminder
-  collector.on('end', (buttInteaction: any) => {
+  collector.on('end', async (buttInteaction: any) => {
+    await queryMessage.delete()
     if (ACTIVE_REMINDERS.length > 0) {
       if(buttInteaction.first().customId === "setReminder") {
         cancelReminders();
