@@ -74,7 +74,7 @@ export const setReminder = async (interaction: any, time: Date) => {
 
 	// const job1String = formatCronString(add(new Date(), {minutes: 1}), {minute: true});
   ACTIVE_REMINDERS = []
-
+  let job1: cron.CronJob, job2: cron.CronJob, job3: cron.CronJob;
   if(!f1RoleId) {
     interaction.guild.roles.cache.forEach((val: any, key: any) => {
       if(val.name == 'F1') {
@@ -83,26 +83,44 @@ export const setReminder = async (interaction: any, time: Date) => {
       }
     });
   }
+   try{
+      job1 = new cron.CronJob(sub(time, {hours: 1}), () => {
+      interaction.channel.send(`<@&${f1RoleId}> RACE STARTS IN ${formatDistanceToNowStrict(time)}`)
+      
+    })
+    job1.start();
+    ACTIVE_REMINDERS.push(job1);
 
-	let job1 = new cron.CronJob(sub(time, {hours: 1}), () => {
-    interaction.channel.send(`<@&${f1RoleId}> RACE STARTS IN ${formatDistanceToNowStrict(time)}`)
-  })
+  } catch(e){
+   console.log(e)
+  }
+	
+  try {
 
-	let job2 = new cron.CronJob(sub(time, {minutes: 30}), () => {
-    interaction.channel.send(`<@&${f1RoleId}> RACE STARTS IN ${formatDistanceToNowStrict(time)}`)
-  })
+      job2 = new cron.CronJob(sub(time, {minutes: 30}), () => {
+      interaction.channel.send(`<@&${f1RoleId}> RACE STARTS IN ${formatDistanceToNowStrict(time)}`)
+      })
+      job2.start();
+      ACTIVE_REMINDERS.push(job2);
+  } catch(e) {
+    console.log("error")
+  }
 
-	let job3 = new cron.CronJob(sub(time, {minutes: 10}), () => {
-    interaction.channel.send(`<@&${f1RoleId}> RACE STARTS IN ${formatDistanceToNowStrict(time)}` )
-    // reset reminders array
-    ACTIVE_REMINDERS = [];
-  })
+  try {
+    job3 = new cron.CronJob(sub(time, {minutes: 5}), () => {
+      interaction.channel.send(`<@&${f1RoleId}> RACE STARTS IN ${formatDistanceToNowStrict(time)}\n HAAAAAAAAAI VERSTAPPEN MUIE HAMI` )
+      // reset reminders array
+      
+      ACTIVE_REMINDERS = [];
+    })
+    job3.start();
+    ACTIVE_REMINDERS.push(job3);
 
-  ACTIVE_REMINDERS.push(job1, job2, job3);
+  } catch (e){
+    console.log('error')
+  }
 
-	job1.start();
-  job2.start();
-  job3.start();
+  
 }
 
 const formatCronString = (date: Date, {second = false, minute = false, hour = true, day = true, month = true} = {}) => {
