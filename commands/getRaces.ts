@@ -62,7 +62,7 @@ const getRemRaces = (racesTable: any[]) => {
 
 	const now = Date.now();
 
-	for(let i = racesTable.length -1; i >= 0; i--) {
+	for(let i = 0; i < racesTable.length; i++) {
 		const raceDate = `${racesTable[i].date}T${racesTable[i].time}`
 		if (Date.parse(raceDate) > now) {
 			rounds.push(racesTable[i].round);

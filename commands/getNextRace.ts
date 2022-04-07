@@ -67,7 +67,7 @@ module.exports = {
 const getNextRace = (racesTable: Races[]) => {
 	const now = new Date;
   let raceDate = new Date;
-	for(let i = racesTable.length -1; i >= 0; i--) {
+	for(let i = 0; i < racesTable.length; i++) {
 	  raceDate = new Date(`${racesTable[i].date}T${racesTable[i].time}`)
 		if (raceDate > now) {
 			return racesTable[i];
