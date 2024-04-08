@@ -5,6 +5,7 @@ module.exports = {
 		.setName('ping')
 		.setDescription('Replies with Pong!'),
 	async execute(interaction: any) {
-		await interaction.reply('Pong!');
+		await interaction.reply('Matei are putulica mica');
+		// await interaction.reply(`http:\/\/.\/\\<\#0\>:  :\/\/.\/\<\#0\>`);
 	},
 };
